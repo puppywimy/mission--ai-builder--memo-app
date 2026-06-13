@@ -6,7 +6,7 @@ import androidx.compose.ui.window.application
 fun main() = application {
     Window(
         onCloseRequest = ::exitApplication,
-        title = "memo-app",
+        title = "메모 앱",
     ) {
         App()
     }
