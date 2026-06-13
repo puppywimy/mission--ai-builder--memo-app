@@ -1,14 +1,17 @@
 package com.back
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -24,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
@@ -77,8 +81,9 @@ fun App() {
 /**
  * 블록 단위 메모 편집 영역. (requirements.md 4, 5)
  *
- * - 블록은 작성한 순서대로 위에서 아래로 표시된다.
- * - 사용자는 새 블록을 추가하고, 기존 블록을 수정하거나 삭제할 수 있다.
+ * 세 탭은 모두 이 동일한 편집 방식을 사용하며, 각 탭은 블록들이 위에서 아래로 이어지는
+ * 하나의 메모 문서처럼 동작한다. 블록 사이에는 구분선이나 테두리가 보이지 않아
+ * Notion과 유사하게 전체가 하나의 문서처럼 보인다. (requirements.md 4, 5)
  */
 @Composable
 private fun MemoEditor(
@@ -109,7 +114,10 @@ private fun MemoEditor(
 }
 
 /**
- * 하나의 블록을 편집하는 행. 텍스트 입력 필드와 삭제 버튼으로 구성된다.
+ * 하나의 블록을 편집하는 행.
+ *
+ * 블록 입력 필드는 테두리·배경·구분선이 없는 BasicTextField로 표시해, 여러 블록이
+ * 모이면 전체가 하나의 메모 문서처럼 자연스럽게 이어지도록 한다. (requirements.md 4, 5)
  */
 @Composable
 private fun BlockRow(
@@ -117,14 +125,35 @@ private fun BlockRow(
     onTextChange: (String) -> Unit,
     onDelete: () -> Unit,
 ) {
+    // 빈 블록에 입력을 안내하는 플레이스홀더는, 해당 블록에 포커스가 있을 때만 표시한다.
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        OutlinedTextField(
+        BasicTextField(
             value = block.text,
             onValueChange = onTextChange,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).padding(vertical = 4.dp),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                color = MaterialTheme.colorScheme.onSurface,
+            ),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            interactionSource = interactionSource,
+            decorationBox = { innerTextField ->
+                Box {
+                    if (block.text.isEmpty() && isFocused) {
+                        Text(
+                            text = "내용을 입력하세요",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    innerTextField()
+                }
+            },
         )
         TextButton(onClick = onDelete) {
             Text("삭제")
